@@ -1,0 +1,57 @@
+\documentclass[SKL-MASTER.tex]{subfiles}
+\begin{document}
+\subsection{Using Stochastic Gradient Descent for classification}
+
+As was discussed in Chapter 2, Working with Linear Models, Stochastic Gradient Descent is a
+fundamental technique to fit a model for regression. There are natural connections between
+the two techniques, as the name so obviously implies.
+\subsection*{Getting ready}
+In regression, we minimized a cost function that penalized for bad choices on a continuous
+scale, but for classification, we'll minimize a cost function that penalizes for two (or more) cases.
+\subsection*{Implementation} % How to do it…
+First, let's create some very basic data:
+%------------------------------%
+\begin{framed}
+\begin{verbatim}
+>>> from sklearn import datasets
+>>> X, y = datasets.make_classification()
+\end{verbatim}
+\end{framed}
+Next, we'll create a SGDClassifier instance:
+%------------------------------%
+\begin{framed}
+\begin{verbatim}
+>>> from sklearn import linear_model
+>>> sgd_clf = linear_model.SGDClassifier()
+\end{verbatim}
+\end{framed}
+As usual, we'll fit the model:
+%------------------------------%
+\begin{framed}
+\begin{verbatim}
+>>> sgd_clf.fit(X, y)
+SGDClassifier(alpha=0.0001, class_weight=None, epsilon=0.1, eta0=0.0,
+fit_intercept=True, l1_ratio=0.15,
+learning_rate='optimal', loss='hinge', n_iter=5,
+n_jobs=1, penalty='l2', power_t=0.5, random_state=None,
+shuffle=False, verbose=0, warm_start=False)
+\end{verbatim}
+\end{framed}
+We can set the \texttt{class\_weight} parameter to account for the varying amounts of unbalance
+in a dataset.
+
+%===================================================================%
+%-- Classifying Data with scikit-learn
+%-- 154
+\subsubsection{The Hinge Loss Function}
+The Hinge loss function is defined as follows:
+
+Here, t is the true classification denoted as +1 for one case and -1 for the other. The vector of
+coefficients is denoted by y as fit from the model, and x is the value of interest. There is also
+an intercept for good measure. To put it another way:
+\[  \]
+\[  \]
+
+%=================================================================================%
+
+\end{document}

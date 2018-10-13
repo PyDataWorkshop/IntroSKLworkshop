@@ -1,0 +1,478 @@
+Clustering with K-Means
+In the previous chapters we discussed supervised learning tasks; we examined
+algorithms for regression and classification that learned from labeled training data. In
+this chapter we will discuss an unsupervised learning task called clustering. Clustering
+is used to find groups of similar observations within a set of unlabeled data. We will
+discuss the K-Means clustering algorithm, apply it to an image compression problem,
+and learn to measure its performance. Finally, we will work through a semi-supervised
+learning problem that combines clustering with classification.
+Recall from Chapter 1, The Fundamentals of Machine Learning, that the goal of
+unsupervised learning is to discover hidden structure or patterns in unlabeled training
+data. Clustering, or cluster analysis, is the task of grouping observations such that
+members of the same group, or cluster, are more similar to each other by a given
+metric than they are to the members of the other clusters. As with supervised learning,
+we will represent an observation as an n-dimensional vector. For example, assume that
+your training data consists of the samples plotted in the following figure:
+www.it-ebooks.info
+Clustering with K-Means
+[ 116 ]
+Clustering might reveal the following two groups, indicated by squares and circles:
+Clustering could also reveal the following four groups:
+www.it-ebooks.info
+Chapter 6
+[ 117 ]
+Clustering is commonly used to explore a dataset. Social networks can be clustered
+to identify communities and to suggest missing connections between people. In
+biology, clustering is used to find groups of genes with similar expression patterns.
+Recommendation systems sometimes employ clustering to identify products or
+media that might appeal to a user. In marketing, clustering is used to find segments
+of similar consumers. In the following sections, we will work through an example of
+using the K-Means algorithm to cluster a dataset.
+Clustering with the K-Means algorithm
+The K-Means algorithm is a clustering method that is popular because of its speed and
+scalability. K-Means is an iterative process of moving the centers of the clusters, or the
+centroids, to the mean position of their constituent points, and re-assigning instances
+to their closest clusters. The titular K is a hyperparameter that specifies the number of
+clusters that should be created; K-Means automatically assigns observations to clusters
+but cannot determine the appropriate number of clusters. K must be a positive integer
+that is less than the number of instances in the training set. Sometimes, the number of
+clusters is specified by the clustering problem's context. For example, a company that
+manufactures shoes might know that it is able to support manufacturing three new
+models. To understand what groups of customers to target with each model, it surveys
+customers and creates three clusters from the results. That is, the value of K was
+specified by the problem's context. Other problems may not require a specific number
+of clusters, and the optimal number of clusters may be ambiguous. We will discuss a
+heuristic to estimate the optimal number of clusters called the elbow method later in
+this chapter.
+The parameters of K-Means are the positions of the clusters' centroids and the
+observations that are assigned to each cluster. Like generalized linear models and
+decision trees, the optimal values of K-Means' parameters are found by minimizing
+a cost function. The cost function for K-Means is given by the following equation:
+2
+1 k
+K
+i k
+k i C
+J x μ
+= 
+= −
+www.it-ebooks.info
+Clustering with K-Means
+[ 118 ]
+In the preceding equation, k
+μ is the centroid for the cluster k . The cost function sums
+the distortions of the clusters. Each cluster's distortion is equal to the sum of the
+squared distances between its centroid and its constituent instances. The distortion is
+small for compact clusters and large for clusters that contain scattered instances. The
+parameters that minimize the cost function are learned through an iterative process
+of assigning observations to clusters and then moving the clusters. First, the clusters'
+centroids are initialized to random positions. In practice, setting the centroids'
+positions equal to the positions of randomly selected observations yields the best
+results. During each iteration, K-Means assigns observations to the cluster that they
+are closest to, and then moves the centroids to their assigned observations' mean
+location. Let's work through an example by hand using the training data shown in
+the following table:
+Instance X0 X1
+1 7 5
+2 5 7
+3 7 7
+4 3 3
+5 4 6
+6 1 4
+7 0 0
+8 2 2
+9 8 7
+10 6 8
+11 5 5
+12 3 7
+There are two explanatory variables and each instance has two features. The instances
+are plotted in the following figure:
+www.it-ebooks.info
+Chapter 6
+[ 119 ]
+Assume that K-Means initializes the centroid for the first cluster to the fifth instance
+and the centroid for the second cluster to the eleventh instance. For each instance,
+we will calculate its distance to both centroids, and assign it to the cluster with the
+closest centroid. The initial assignments are shown in the Cluster column of the
+following table:
+Instance X0 X1 C1 distance C2 distance Last cluster Cluster Changed?
+1 7 5 3.16228 2 None C2 Yes
+2 5 7 1.41421 2 None C1 Yes
+3 7 7 3.16228 2.82843 None C2 Yes
+4 3 3 3.16228 2.82843 None C2 Yes
+5 4 6 0 1.41421 None C1 Yes
+6 1 4 3.60555 4.12311 None C1 Yes
+7 0 0 7.21110 7.07107 None C2 Yes
+8 2 2 4.47214 4.24264 None C2 Yes
+9 8 7 4.12311 3.60555 None C2 Yes
+10 6 8 2.82843 3.16228 None C1 Yes
+11 5 5 1.41421 0 None C2 Yes
+12 3 7 1.41421 2.82843 None C1 Yes
+C1 centroid 4 6
+C2 centroid 5 5
+www.it-ebooks.info
+Clustering with K-Means
+[ 120 ]
+The plotted centroids and the initial cluster assignments are shown in the following
+graph. Instances assigned to the first cluster are marked with Xs, and instances
+assigned to the second cluster are marked with dots. The markers for the centroids
+are larger than the markers for the instances.
+Now we will move both centroids to the means of their constituent instances,
+recalculate the distances of the training instances to the centroids, and reassign the
+instances to the closest centroids:
+Instance X0 X1 C1
+distance
+C2
+distance
+Last
+Cluster
+New
+Cluster Changed?
+1 7 5 3.492850 2.575394 C2 C2 No
+2 5 7 1.341641 2.889107 C1 C1 No
+3 7 7 3.255764 3.749830 C2 C1 Yes
+4 3 3 3.492850 1.943067 C2 C2 No
+5 4 6 0.447214 1.943067 C1 C1 No
+6 1 4 3.687818 3.574285 C1 C2 Yes
+7 0 0 7.443118 6.169378 C2 C2 No
+www.it-ebooks.info
+Chapter 6
+[ 121 ]
+Instance X0 X1 C1
+distance
+C2
+distance
+Last
+Cluster
+New
+Cluster Changed?
+8 2 2 4.753946 3.347250 C2 C2 No
+9 8 7 4.242641 4.463000 C2 C1 Yes
+10 6 8 2.720294 4.113194 C1 C1 No
+11 5 5 1.843909 0.958315 C2 C2 No
+12 3 7 1 3.260775 C1 C1 No
+C1
+centroid 3.8 6.4
+C2
+centroid 4.571429 4.142857
+The new clusters are plotted in the following graph. Note that the centroids are
+diverging and several instances have changed their assignments:
+www.it-ebooks.info
+Clustering with K-Means
+[ 122 ]
+Now, we will move the centroids to the means of their constituents' locations again
+and reassign the instances to their nearest centroids. The centroids continue to
+diverge, as shown in the following figure:
+None of the instances' centroid assignments will change in the next iteration;
+K-Means will continue iterating until some stopping criteria is satisfied. Usually,
+this criterion is either a threshold for the difference between the values of the cost
+function for subsequent iterations, or a threshold for the change in the positions
+of the centroids between subsequent iterations. If these stopping criteria are small
+enough, K-Means will converge on an optimum. This optimum will not necessarily
+be the global optimum.
+www.it-ebooks.info
+Chapter 6
+[ 123 ]
+Local optima
+Recall that K-Means initially sets the positions of the clusters' centroids to the
+positions of randomly selected observations. Sometimes, the random initialization
+is unlucky and the centroids are set to positions that cause K-Means to converge to a
+local optimum. For example, assume that K-Means randomly initializes two cluster
+centroids to the following positions:
+www.it-ebooks.info
+Clustering with K-Means
+[ 124 ]
+K-Means will eventually converge on a local optimum like that shown in the
+following figure. These clusters may be informative, but it is more likely that the
+top and bottom groups of observations are more informative clusters. To avoid
+local optima, K-Means is often repeated dozens or even hundreds of times. In
+each iteration, it is randomly initialized to different starting cluster positions. The
+initialization that minimizes the cost function best is selected.
+The elbow method
+If K is not specified by the problem's context, the optimal number of clusters can
+be estimated using a technique called the elbow method. The elbow method plots
+the value of the cost function produced by different values of K. As K increases,
+the average distortion will decrease; each cluster will have fewer constituent
+instances, and the instances will be closer to their respective centroids. However,
+the improvements to the average distortion will decline as K increases. The value
+of K at which the improvement to the distortion declines the most is called the
+elbow. Let's use the elbow method to choose the number of clusters for a dataset.
+The following scatter plot visualizes a dataset with two obvious clusters:
+www.it-ebooks.info
+Chapter 6
+[ 125 ]
+We will calculate and plot the mean distortion of the clusters for each value of K
+from 1 to 10 with the following code:
+
+The average distortion improves rapidly as we increase K from 1 to 2. There is little
+improvement for values of K greater than 2. Now let's use the elbow method on the
+following dataset with three clusters:
+
+%=============================================================%
+Chapter 6
+[ 127 ]
+The following figure shows the elbow plot for the dataset. From this, we can see that
+the rate of improvement to the average distortion declines the most when adding a
+fourth cluster, that is, the elbow method confirms that K should be set to three for
+this dataset.
+%=============================================================%
+Clustering with K-Means
+[ 128 ]
+Evaluating clusters
+We defined machine learning as the design and study of systems that learn from
+experience to improve their performance of a task as measured by a given metric.
+K-Means is an unsupervised learning algorithm; there are no labels or ground truth
+to compare with the clusters. However, we can still evaluate the performance of
+the algorithm using intrinsic measures. We have already discussed measuring the
+distortions of the clusters. In this section, we will discuss another performance measure
+for clustering called the silhouette coefficient. The silhouette coefficient is a measure of
+the compactness and separation of the clusters. It increases as the quality of the clusters
+increase; it is large for compact clusters that are far from each other and small for large,
+overlapping clusters. The silhouette coefficient is calculated per instance; for a set of
+instances, it is calculated as the mean of the individual samples' scores. The silhouette
+coefficient for an instance is calculated with the following equation:
+max ( , )
+s ba
+a b
+=
+a is the mean distance between the instances in the cluster. b is the mean distance
+between the instance and the instances in the next closest cluster. The following
+example runs K-Means four times to create two, three, four, and eight clusters
+from a toy dataset and calculates the silhouette coefficient for each run:
+>>> import numpy as np
+>>> from sklearn.cluster import KMeans
+>>> from sklearn import metrics
+>>> import matplotlib.pyplot as plt
+>>> plt.subplot(3, 2, 1)
+>>> x1 = np.array([1, 2, 3, 1, 5, 6, 5, 5, 6, 7, 8, 9, 7, 9])
+>>> x2 = np.array([1, 3, 2, 2, 8, 6, 7, 6, 7, 1, 2, 1, 1, 3])
+>>> X = np.array(zip(x1, x2)).reshape(len(x1), 2)
+>>> plt.xlim([0, 10])
+>>> plt.ylim([0, 10])
+>>> plt.title('Instances')
+>>> plt.scatter(x1, x2)
+>>> colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'b']
+>>> markers = ['o', 's', 'D', 'v', '^', 'p', '*', '+']
+>>> tests = [2, 3, 4, 5, 8]
+>>> subplot_counter = 1
+>>> for t in tests:
+>>> subplot_counter += 1
+>>> plt.subplot(3, 2, subplot_counter)
+>>> kmeans_model = KMeans(n_clusters=t).fit(X)
+
+%=============================================================%
+Chapter 6
+[ 129 ]
+>>> for i, l in enumerate(kmeans_model.labels_):
+>>> plt.plot(x1[i], x2[i], color=colors[l], marker=markers[l],
+ls='None')
+>>> plt.xlim([0, 10])
+>>> plt.ylim([0, 10])
+>>> plt.title('K = %s, silhouette coefficient = %.03f' % (
+>>> t, metrics.silhouette_score(X, kmeans_model.labels_,
+metric='euclidean')))
+>>> plt.show()
+This script produces the following figure:
+www.it-ebooks.info
+Clustering with K-Means
+[ 130 ]
+The dataset contains three obvious clusters. Accordingly, the silhouette coefficient
+is greatest when K is equal to three. Setting K equal to eight produces clusters of
+instances that are as close to each other as they are to the instances in some of the
+other clusters, and the silhouette coefficient of these clusters is smallest.
+Image quantization
+In the previous sections, we used clustering to explore the structure of a dataset.
+Now let's apply it to a different problem. Image quantization is a lossy compression
+method that replaces a range of similar colors in an image with a single color.
+Quantization reduces the size of the image file since fewer bits are required to
+represent the colors. In the following example, we will use clustering to discover a
+compressed palette for an image that contains its most important colors. We will then
+rebuild the image using the compressed palette. This example requires the mahotas
+image processing library, which can be installed using pip install mahotas:
+>>> import numpy as np
+>>> import matplotlib.pyplot as plt
+>>> from sklearn.cluster import KMeans
+>>> from sklearn.utils import shuffle
+>>> import mahotas as mh
+First we read and flatten the image:
+>>> original_img = np.array(mh.imread('img/tree.jpg'), dtype=np.
+float64) / 255
+>>> original_dimensions = tuple(original_img.shape)
+>>> width, height, depth = tuple(original_img.shape)
+>>> image_flattened = np.reshape(original_img, (width * height, depth))
+We then use K-Means to create 64 clusters from a sample of 1,000 randomly selected
+colors. Each of the clusters will be a color in the compressed palette. The code is
+as follows:
+>>> image_array_sample = shuffle(image_flattened, random_state=0)
+[:1000]
+>>> estimator = KMeans(n_clusters=64, random_state=0)
+>>> estimator.fit(image_array_sample)
+Next, we predict the cluster assignment for each of the pixels in the original image:
+>>> cluster_assignments = estimator.predict(image_flattened)
+www.it-ebooks.info
+Chapter 6
+[ 131 ]
+Finally, we create the compressed image from the compressed palette and
+cluster assignments:
+>>> compressed_palette = estimator.cluster_centers_
+>>> compressed_img = np.zeros((width, height, compressed_palette.
+shape[1]))
+>>> label_idx = 0
+>>> for i in range(width):
+>>> for j in range(height):
+>>> compressed_img[i][j] = compressed_palette[cluster_
+assignments[label_idx]]
+>>> label_idx += 1
+>>> plt.subplot(122)
+>>> plt.title('Original Image')
+>>> plt.imshow(original_img)
+>>> plt.axis('off')
+>>> plt.subplot(121)
+>>> plt.title('Compressed Image')
+>>> plt.imshow(compressed_img)
+>>> plt.axis('off')
+>>> plt.show()
+The original and compressed versions of the image are show in the following figure:
+www.it-ebooks.info
+Clustering with K-Means
+[ 132 ]
+Clustering to learn features
+In this example, we will combine clustering with classification in a semi-supervised
+learning problem. You will learn features by clustering unlabeled data and use the
+learned features to build a supervised classifier.
+Suppose you own a cat and a dog. Suppose that you have purchased a smartphone,
+ostensibly to use to communicate with humans, but in practice just to use to
+photograph your cat and dog. Your photographs are awesome and you are certain
+that your friends and co-workers would love to review all of them in detail. You'd
+like to be courteous and respect that some people will only want to see your cat
+photos, while others will only want to see your dog photos, but separating the
+photos is laborious. Let's build a semi-supervised learning system that can classify
+images of cats and dogs.
+Recall from Chapter 3, Feature Extraction and Preprocessing, that a naïve approach
+to classifying images is to use the intensities, or brightnesses, of all of the pixels as
+explanatory variables. This approach produces high-dimensional feature vectors for
+even small images. Unlike the high-dimensional feature vectors we used to represent
+documents, these vectors are not sparse. Furthermore, it is obvious that this approach
+is sensitive to the image's illumination, scale, and orientation. In Chapter 3, Feature
+Extraction and Preprocessing, we also discussed SIFT and SURF descriptors, which
+describe interesting regions of an image in ways that are invariant to scale, rotation,
+and illumination. In this example, we will cluster the descriptors extracted from all of
+the images to learn features. We will then represent an image with a vector with one
+element for each cluster. Each element will encode the number of descriptors extracted
+from the image that were assigned to the cluster. This approach is sometimes called
+the bag-of-features representation, as the collection of clusters is analogous to the
+bag-of-words representation's vocabulary. We will use 1,000 images of cats and 1,000
+images of dogs from the training set for Kaggle's Dogs vs. Cats competition. The dataset
+can be downloaded from https://www.kaggle.com/c/dogs-vs-cats/data. We
+will label cats as the positive class and dogs as the negative class. Note that the images
+have different dimensions; since our feature vectors do not represent pixels, we do not
+need to resize the images to have the same dimensions. We will train using the first 60
+percent of the images, and test on the remaining 40 percent:
+>>> import numpy as np
+>>> import mahotas as mh
+>>> from mahotas.features import surf
+>>> from sklearn.linear_model import LogisticRegression
+>>> from sklearn.metrics import *
+>>> from sklearn.cluster import MiniBatchKMeans
+>>> import glob
+www.it-ebooks.info
+Chapter 6
+[ 133 ]
+First, we load the images, convert them to grayscale, and extract the SURF
+descriptors. SURF descriptors can be extracted more quickly than many similar
+features, but extracting descriptors from 2,000 images is still computationally
+expensive. Unlike the previous examples, this script requires several minutes
+to execute on most computers:
+>>> all_instance_filenames = []
+>>> all_instance_targets = []
+>>> for f in glob.glob('cats-and-dogs-img/*.jpg'):
+>>> target = 1 if 'cat' in f else 0
+>>> all_instance_filenames.append(f)
+>>> all_instance_targets.append(target)
+>>> surf_features = []
+>>> counter = 0
+>>> for f in all_instance_filenames:
+>>> print 'Reading image:', f
+>>> image = mh.imread(f, as_grey=True)
+>>> surf_features.append(surf.surf(image)[:, 5:])
+>>> train_len = int(len(all_instance_filenames) * .60)
+>>> X_train_surf_features = np.concatenate(surf_features[:train_len])
+>>> X_test_surf_feautres = np.concatenate(surf_features[train_len:])
+>>> y_train = all_instance_targets[:train_len]
+>>> y_test = all_instance_targets[train_len:]
+We then group the extracted descriptors into 300 clusters in the following code
+sample. We use MiniBatchKMeans, a variation of K-Means that uses a random
+sample of the instances in each iteration. As it computes the distances to the
+centroids for only a sample of the instances in each iteration, MiniBatchKMeans
+converges more quickly but its clusters' distortions may be greater. In practice,
+the results are similar, and this compromise is acceptable.:
+>>> n_clusters = 300
+>>> print 'Clustering', len(X_train_surf_features), 'features'
+>>> estimator = MiniBatchKMeans(n_clusters=n_clusters)
+>>> estimator.fit_transform(X_train_surf_features)
+www.it-ebooks.info
+Clustering with K-Means
+[ 134 ]
+Next, we construct feature vectors for the training and testing data. We find the
+cluster associated with each of the extracted SURF descriptors, and count them using
+NumPy's binCount() function. The following code produces a 300-dimensional
+feature vector for each instance:
+>>> X_train = []
+>>> for instance in surf_features[:train_len]:
+>>> clusters = estimator.predict(instance)
+>>> features = np.bincount(clusters)
+>>> if len(features) < n_clusters:
+>>> features = np.append(features, np.zeros((1, n_clusterslen(
+features))))
+>>> X_train.append(features)
+>>> X_test = []
+>>> for instance in surf_features[train_len:]:
+>>> clusters = estimator.predict(instance)
+>>> features = np.bincount(clusters)
+>>> if len(features) < n_clusters:
+>>> features = np.append(features, np.zeros((1, n_clusterslen(
+features))))
+>>> X_test.append(features)
+Finally, we train a logistic regression classifier on the feature vectors and targets,
+and assess its precision, recall, and accuracy:
+>>> clf = LogisticRegression(C=0.001, penalty='l2')
+>>> clf.fit_transform(X_train, y_train)
+>>> predictions = clf.predict(X_test)
+>>> print classification_report(y_test, predictions)
+>>> print 'Precision: ', precision_score(y_test, predictions)
+>>> print 'Recall: ', recall_score(y_test, predictions)
+>>> print 'Accuracy: ', accuracy_score(y_test, predictions)
+Reading image: dog.9344.jpg
+...
+Reading image: dog.8892.jpg
+www.it-ebooks.info
+Chapter 6
+[ 135 ]
+Clustering 756914 features
+precision recall f1-score support
+0 0.71 0.76 0.73 392
+1 0.75 0.70 0.72 408
+avg / total 0.73 0.73 0.73 800
+Precision: 0.751322751323
+Recall: 0.696078431373
+Accuracy: 0.7275
+This semi-supervised system has better precision and recall than a logistic regression
+classifier that uses only the pixel intensities as features. Furthermore, our feature
+representations have only 300 dimensions; even small 100 x 100 pixel images would
+have 10,000 dimensions.
+Summary
+In this chapter, we discussed our first unsupervised learning task: clustering.
+Clustering is used to discover structure in unlabeled data. You learned about the
+K-Means clustering algorithm, which iteratively assigns instances to clusters and
+refines the positions of the cluster centroids. While K-Means learns from experience
+without supervision, its performance is still measurable; you learned to use distortion
+and the silhouette coefficient to evaluate clusters. We applied K-Means to two
+different problems. First, we used K-Means for image quantization, a compression
+technique that represents a range of colors with a single color. We also used K-Means
+to learn features in a semi-supervised image classification problem.
+In the next chapter, we will discuss another unsupervised learning task called
+dimensionality reduction. Like the semi-supervised feature representations we
+created to classify images of cats and dogs, dimensionality reduction can be used
+to reduce the dimensions of a set of explanatory variables while retaining as much
+information as possible.
+www.it

@@ -1,0 +1,901 @@
+Postmodel Workflow
+This chapter will cover the following recipes:
+ff K-fold cross validation
+ff Automatic cross validation
+ff Cross validation with ShuffleSplit
+ff Stratified k-fold
+ff Poor man's grid search
+ff Brute force grid search
+ff Using dummy estimators to compare results
+ff Regression model evaluation
+ff Feature selection
+ff Feature selection on L1 norms
+ff Persisting models with joblib
+%=========================================================================== %
+Introduction
+Even though by design the chapters are unordered, you could argue by virtue of the art of
+data science, we've saved the best for last.
+For the most part, each recipe within this chapter is applicable to the various models we've
+worked with. In some ways, you can think about this chapter as tuning the parameters and
+features. Ultimately, we need to choose some criteria to determine the "best" model. We'll use
+various measures to define best. This is covered in the Regression model evaluation recipe.
+Then in the Cross validation with ShuffleSplit recipe, we will randomize the evaluation across
+subsets of the data to help avoid overfitting.
+www.it-ebooks.info
+Postmodel Workflow
+162
+K-fold cross validation
+In this recipe, we'll create, quite possibly, the most important post-model validation
+exercise—cross validation. We'll talk about k-fold cross validation in this recipe. There are
+several varieties of cross validation, each with slightly different randomization schemes.
+K-fold is perhaps one of the most well-known randomization schemes.
+Getting ready
+We'll create some data and then fit a classifier on the different folds. It's probably worth
+mentioning that if you can keep a holdout set, then that would be best. For example, we
+have a dataset where N = 1000. If we hold out 200 data points, then use cross validation
+between the other 800 points to determine the best parameters.
+How to do it...
+First, we'll create some fake data, then we'll examine the parameters, and finally, we'll look
+at the size of the resulting dataset:
+>>> N = 1000>>>
+holdout = 200
+>>> from sklearn.datasets import make_regression
+>>> X, y = make_regression(1000, shuffle=True)
+Now that we have the data, let's hold out 200 points, and then go through the fold scheme
+like we normally would:
+>>> X_h, y_h = X[:holdout], y[:holdout]
+>>> X_t, y_t = X[holdout:], y[holdout:]
+>>> from sklearn.cross_validation import KFold
+K-fold gives us the option of choosing how many folds we want, if we want the values to be
+indices or Booleans, if want to shuffle the dataset, and finally, the random state (this is mainly
+for reproducibility). Indices will actually be removed in later versions. It's assumed to be True.
+Let's create the cross validation object:
+>>> kfold = KFold(len(y_t), n_folds=4)
+Now, we can iterate through the k-fold object:
+>>> output_string = "Fold: {}, N_train: {}, N_test: {}"
+>>> for i, (train, test) in enumerate(kfold):
+www.it-ebooks.info
+Chapter 5
+163
+print output_string.format(i, len(y_t[train]), len(y_t[test]))
+Fold: 0, N_train: 600, N_test: 200
+Fold: 1, N_train: 600, N_test: 200
+Fold: 2, N_train: 600, N_test: 200
+Fold: 3, N_train: 600, N_test: 200
+Each iteration should return the same split size.
+How it works...
+It's probably clear, but k-fold works by iterating through the folds and holds out 1/n_folds *
+N, where N for us was len(y_t).
+From a Python perspective, the cross validation objects have an iterator that can be accessed
+by using the in operator. Often times, it's useful to write a wrapper around a cross validation
+object that will iterate a subset of the data. For example, we may have a dataset that has
+repeated measures for data points or we may have a dataset with patients and each patient
+having measures.
+We're going to mix it up and use pandas for this part:
+>>> import numpy as np
+>>> import pandas as pd
+>>> patients = np.repeat(np.arange(0, 100, dtype=np.int8), 8)
+>>> measurements = pd.DataFrame({'patient_id': patients,
+'ys': np.random.normal(0, 1, 800)})
+Now that we have the data, we only want to hold out certain customers instead of data points:
+>>> custids = np.unique(measurements.patient_id)
+>>> customer_kfold = KFold(custids.size, n_folds=4)
+>>> output_string = "Fold: {}, N_train: {}, N_test: {}"
+>>> for i, (train, test) in enumerate(customer_kfold):
+train_cust_ids = custids[train]
+training = measurements[measurements.patient_id.isin(
+train_cust_ids)]
+testing = measurements[~measurements.patient_id.isin(
+train_cust_ids)]
+www.it-ebooks.info
+Postmodel Workflow
+164
+print output_string.format(i, len(training), len(testing))
+Fold: 0, N_train: 600, N_test: 200
+Fold: 1, N_train: 600, N_test: 200
+Fold: 2, N_train: 600, N_test: 200
+Fold: 3, N_train: 600, N_test: 200
+Automatic cross validation
+We've looked at the using cross validation iterators that scikit-learn comes with, but we can
+also use a helper function to perform cross validation for use automatically. This is similar
+to how other objects in scikit-learn are wrapped by helper functions, pipeline for instance.
+Getting ready
+First, we'll need to create a sample classifier; this can really be anything, a decision tree,
+a random forest, whatever. For us, it'll be a random forest. We'll then create a dataset
+and use the cross validation functions.
+How to do it...
+First import the ensemble module and we'll get started:
+>>> from sklearn import ensemble
+>>> rf = ensemble.RandomForestRegressor(max_features='auto')
+Okay, so now, let's create some regression data:
+>>> from sklearn import datasets
+>>> X, y = datasets.make_regression(10000, 10)
+Now that we have the data, we can import the cross_validation module and get access
+to the functions we'll use:
+>>> from sklearn import cross_validation
+>>> scores = cross_validation.cross_val_score(rf, X, y)
+>>> print scores
+[ 0.86823874 0.86763225 0.86986129]
+%============================================================================================ %
+%www.it-ebooks.info
+%Chapter 5
+%165
+How it works...
+For the most part, this will delegate to the cross validation objects. One nice thing is that, the
+function will handle performing the cross validation in parallel.
+We can activate verbose mode play by play:
+>>> scores = cross_validation.cross_val_score(rf, X, y, verbose=3,
+cv=4)
+[CV] no parameters to be set
+[CV] no parameters to be set, score=0.872866 - 0.7s
+[CV] no parameters to be set
+[CV] no parameters to be set, score=0.873679 - 0.6s
+[CV] no parameters to be set
+[CV] no parameters to be set, score=0.878018 - 0.7s
+[CV] no parameters to be set
+[CV] no parameters to be set, score=0.871598 - 0.6s
+[Parallel(n_jobs=1)]: Done 1 jobs | elapsed: 0.7s
+[Parallel(n_jobs=1)]: Done 4 out of 4 | elapsed: 2.6s finished
+As we can see, during each iteration, we scored the function. We also get an idea of how long
+the model runs.
+It's also worth knowing that we can score our function predicated on which kind of model we're
+trying to fit. In other recipes, we've discussed how to create your own scoring function.
+Cross validation with ShuffleSplit
+ShuffleSplit is one of the simplest cross validation techniques. This cross validation technique
+will simply take a sample of the data for the number of iterations specified.
+Getting ready
+ShuffleSplit is another cross validation technique that is very simple. We'll specify the total
+elements in the dataset, and it will take care of the rest. We'll walk through an example of
+estimating the mean of a univariate dataset. This is somewhat similar to resampling, but it'll
+illustrate one reason why we want to use cross validation while showing cross validation.
+www.it-ebooks.info
+Postmodel Workflow
+166
+How to do it...
+First, we need to create the dataset. We'll use NumPy to create a dataset, where we know the
+underlying mean. We'll sample half of the dataset to estimate the mean and see how close it
+is to the underlying mean:
+>>> import numpy as np
+>>> true_loc = 1000
+>>> true_scale = 10
+>>> N = 1000
+>>> dataset = np.random.normal(true_loc, true_scale, N)
+>>> import matplotlib.pyplot as plt
+>>> f, ax = plt.subplots(figsize=(7, 5))
+>>> ax.hist(dataset, color='k', alpha=.65, histtype='stepfilled');
+>>> ax.set_title("Histogram of dataset");
+>>> f.savefig("978-1-78398-948-5_06_06.png")
+NumPy will give the following output:
+
+
+%============================================================================================ %
+%www.it-ebooks.info
+%Chapter 5
+%167
+Now, let's take the first half of the data and guess the mean:
+>>> from sklearn import cross_validation
+>>> holdout_set = dataset[:500]
+>>> fitting_set = dataset[500:]
+>>> estimate = fitting_set[:N/2].mean()
+>>> import matplotlib.pyplot as plt
+>>> f, ax = plt.subplots(figsize=(7, 5))
+>>> ax.set_title("True Mean vs Regular Estimate")
+>>> ax.vlines(true_loc, 0, 1, color='r', linestyles='-', lw=5,
+alpha=.65, label='true mean')
+>>> ax.vlines(estimate, 0, 1, color='g', linestyles='-', lw=5,
+alpha=.65, label='regular estimate')
+>>> ax.set_xlim(999, 1001)
+>>> ax.legend()
+>>> f.savefig("978-1-78398-948-5_06_07.png")
+We'll get the following output:
+www.it-ebooks.info
+Postmodel Workflow
+168
+Now, we can use ShuffleSplit to fit the estimator on several smaller datasets:
+>>> from sklearn.cross_validation import ShuffleSplit
+>>> shuffle_split = ShuffleSplit(len(fitting_set))
+>>> mean_p = []
+>>> for train, _ in shuffle_split:
+mean_p.append(fitting_set[train].mean())
+shuf_estimate = np.mean(mean_p)
+>>> import matplotlib.pyplot as plt
+>>> f, ax = plt.subplots(figsize=(7, 5))
+>>> ax.vlines(true_loc, 0, 1, color='r', linestyles='-', lw=5,
+alpha=.65, label='true mean')
+>>> ax.vlines(estimate, 0, 1, color='g', linestyles='-', lw=5,
+alpha=.65, label='regular estimate')
+>>> ax.vlines(shuf_estimate, 0, 1, color='b', linestyles='-', lw=5,
+alpha=.65, label='shufflesplit estimate')
+>>> ax.set_title("All Estimates")
+>>> ax.set_xlim(999, 1001)
+>>> ax.legend(loc=3)
+www.it-ebooks.info
+Chapter 5
+169
+The output will be as follows:
+As we can see, we got an estimate that was similar to what we expected, but we were able to
+take many samples to get that estimate.
+Stratified k-fold
+In this recipe, we'll quickly look at stratified k-fold valuation. We've walked through different
+recipes where the class representation was unbalanced in some manner. Stratified k-fold is
+nice because its scheme is specifically designed to maintain the class proportions.
+Getting ready
+We're going to create a small dataset. In this dataset, we will then use stratified k-fold validation.
+We want it small so that we can see the variation. For larger samples. it probably won't be as big
+of a deal.
+We'll then plot the class proportions at each step to illustrate how the class proportions
+are maintained:
+>>> from sklearn import datasets
+>>> X, y = datasets.make_classification(n_samples=int(1e3),
+weights=[1./11])
+
+
+%============================================================================================ %
+%www.it-ebooks.info
+%Postmodel Workflow
+%170
+Let's check the overall class weight distribution:
+>>> y.mean()
+0.90300000000000002
+Roughly, 90.5 percent of the samples are 1, with the balance 0.
+How to do it...
+Let's create a stratified k-fold object and iterate it through each fold. We'll measure the
+proportion of verse that are 1. After that we'll plot the proportion of classes by the split
+number to see how and if it changes. This code will hopefully illustrate how this is beneficial.
+We'll also plot this code against a basic ShuffleSplit:
+>>> from sklearn import cross_validation
+>>> n_folds = 50
+>>> strat_kfold = cross_validation.StratifiedKFold(y,
+n_folds=n_folds)
+>>> shuff_split = cross_validation.ShuffleSplit(n=len(y),
+n_iter=n_folds)
+>>> kfold_y_props = []
+>>> shuff_y_props = []
+>>> for (k_train, k_test), (s_train, s_test) in zip(strat_kfold,
+>>> shuff_split):
+kfold_y_props.append(y[k_train].mean())
+shuff_y_props.append(y[s_train].mean())
+Now, let's plot the proportions over each fold:
+>>> import matplotlib.pyplot as plt
+>>> f, ax = plt.subplots(figsize=(7, 5))
+>>> ax.plot(range(n_folds), shuff_y_props, label="ShuffleSplit",
+color='k')
+>>> ax.plot(range(n_folds), kfold_y_props, label="Stratified",
+color='k', ls='--')
+>>> ax.set_title("Comparing class proportions.")
+>>> ax.legend(loc='best')
+
+%============================================================================================ %
+%www.it-ebooks.info
+%Chapter 5
+%171
+The output will be as follows:
+We can see that the proportion of each fold for stratified k-fold is stable across folds.
+How it works...
+Stratified k-fold works by taking the y value. First, getting the overall proportion of the classes,
+then intelligently splitting the training and test set into the proportions. This will generalize to
+multiple labels:
+>>> import numpy as np
+>>> three_classes = np.random.choice([1,2,3], p=[.1, .4, .5],
+size=1000)
+>>> import itertools as it
+>>> for train, test in cross_validation.StratifiedKFold(three_classes, 5):
+print np.bincount(three_classes[train])
+[ 0 90 314 395]
+[ 0 90 314 395]
+www.it-ebooks.info
+Postmodel Workflow
+172
+[ 0 90 314 395]
+[ 0 91 315 395]
+[ 0 91 315 396]
+As we can see, we got roughly the sample sizes of each class for our training and
+testing proportions.
+Poor man's grid search
+In this recipe, we're going to introduce grid search with basic Python, though we will use
+sklearn for the models and matplotlib for the visualization.
+Getting ready
+In this recipe, we will perform the following tasks:
+ff Design a basic search grid in the parameter space
+ff Iterate through the grid and check the loss/score function at each point
+in the parameter space for the dataset
+ff Choose the point in the parameter space that minimizes/maximizes the
+evaluation function
+Also, the model we'll fit is a basic decision tree classifier. Our parameter space will be 2
+dimensional to help us with the visualization:
+The parameter space will then be the Cartesian product of the those two sets:
+We'll see in a bit how we can iterate through this space with itertools.
+Let's create the dataset and then get started:
+>>> from sklearn import datasets
+>>> X, y = datasets.make_classification(n_samples=2000, n_features=10)
+
+%============================================================================================ %
+%www.it-ebooks.info
+%Chapter 5
+%173
+How to do it...
+Earlier we said that we'd use grid search to tune two parameters—criteria and
+max_features. We need to represent those as Python sets, and then use itertools
+product to iterate through them:
+>>> criteria = {'gini', 'entropy'}
+>>> max_features = {'auto', 'log2', None}
+>>> import itertools as it
+>>> parameter_space = it.product(criteria, max_features)
+Great! So now that we have the parameter space, let's iterate through it and check the accuracy
+of each model as specified by the parameters. Then, we'll store that accuracy so that we can
+compare different parameter spaces. We'll also use a test and train split of 50, 50:
+import numpy as np
+train_set = np.random.choice([True, False], size=len(y))
+from sklearn.tree import DecisionTreeClassifier
+accuracies = {}
+for criterion, max_feature in parameter_space:
+dt = DecisionTreeClassifier(criterion=criterion,
+max_features=max_feature)
+dt.fit(X[train_set], y[train_set])
+accuracies[(criterion, max_feature)] = (dt.predict(X[~train_set])
+== y[~train_set]).mean()
+>>> accuracies
+{('entropy', None): 0.974609375, ('entropy', 'auto'): 0.9736328125,
+('entropy', 'log2'): 0.962890625, ('gini', None): 0.9677734375, ('gini',
+'auto'): 0.9638671875, ('gini', 'log2'): 0.96875}
+So we now have the accuracies and its performance. Let's visualize the performance:
+>>> from matplotlib import pyplot as plt
+>>> from matplotlib import cm
+>>> cmap = cm.RdBu_r
+>>> f, ax = plt.subplots(figsize=(7, 4))
+>>> ax.set_xticklabels([''] + list(criteria))
+>>> ax.set_yticklabels([''] + list(max_features))
+>>> plot_array = []
+>>> for max_feature in max_features:
+www.it-ebooks.info
+Postmodel Workflow
+174
+m = []
+>>> for criterion in criteria:
+m.append(accuracies[(criterion, max_feature)])
+plot_array.append(m)
+>>> colors = ax.matshow(plot_array, vmin=np.min(accuracies.values()) -
+0.001, vmax=np.max(accuracies.values()) + 0.001, cmap=cmap)
+>>> f.colorbar(colors)
+The following is the output:
+It's fairly easy to see which one performed best here. Hopefully, you can see how this process
+can be taken to the further stage with a brute force method.
+How it works...
+This works fairly simply, we just have to perform the following steps:
+1. Choose a set of parameters.
+2. Iterate through them and find the accuracy of each step.
+3. Find the best performer by visual inspection.
+
+%============================================================================================ %
+%www.it-ebooks.info
+%Chapter 5
+%175
+\section{Brute force grid search}
+In this recipe, we'll do an exhaustive grid search through scikit-learn. This is basically the same
+thing we did in the previous recipe, but we'll utilize built-in methods.
+We'll also walk through an example of performing randomized optimization. This is an alternative
+to brute force search. Essentially, we're trading computer cycles to make sure that we search
+the entire space. We were fairly calm in the last recipe. However, you could imagine a model
+that has several steps, first imputation for fix missing data, then PCA reduce the dimensionality
+to classification. Your parameter space could get very large, very fast; therefore, it can be
+advantageous to only search a part of that space.
+Getting ready
+To get started, we'll need to perform the following steps:
+1. Create some classification data.
+2. We'll then create a LogisticRegression object that will be the model we're fitting.
+3. After that, we'll create the search objects, GridSearch and RandomizedSearchCV.
+%------------------------------------------------ %
+How to do it...
+Run the following code to create some classification data:
+>>> from sklearn.datasets import make_classification
+>>> X, y = make_classification(1000, n_features=5)
+Now, we'll create our logistic regression object:
+>>> from sklearn.linear_model import LogisticRegression
+>>> lr = LogisticRegression(class_weight='auto')
+We need to specify the parameters we want to search. For GridSearch, we can just specify
+the ranges that we care about, but for RandomizedSearchCV, we'll need to actually specify
+the distribution over the same space from which to sample:
+>>> lr.fit(X, y)
+LogisticRegression(C=1.0, class_weight={0: 0.25, 1: 0.75}, dual=False,
+fit_intercept=True, intercept_scaling=1,
+penalty='l2', random_state=None, tol=0.0001)
+www.it-ebooks.info
+Postmodel Workflow
+176
+>>> grid_search_params = {'penalty': ['l1', 'l2'],
+'C': [1, 2, 3, 4]}
+The only change we'll need to make is to describe the C parameter as a probability distribution.
+We'll keep it simple right now, though we will use scipy to describe the distribution:
+>>> import scipy.stats as st
+>>> import numpy as np
+>>> random_search_params = {'penalty': ['l1', 'l2'],
+'C': st.randint(1, 4)}
+How it works...
+Now, we'll fit the classifier. This works by passing lr to the parameter search objects:
+>>> from sklearn.grid_search import GridSearchCV, RandomizedSearchCV
+>>> gs = GridSearchCV(lr, grid_search_params)
+GridSearchCV implements the same API as the other models:
+>>> gs.fit(X, y)
+GridSearchCV(cv=None, estimator=LogisticRegression(C=1.0,
+class_weight='auto', dual=False, fit_intercept=True,
+intercept_scaling=1, penalty='l2', random_state=None,
+tol=0.0001), fit_params={}, iid=True, loss_func=None,
+n_jobs=1, param_grid={'penalty': ['l1', 'l2'],
+'C': [1, 2, 3, 4]}, pre_dispatch='2*n_jobs', refit=True,
+score_func=None, scoring=None, verbose=0)
+As we can see with the param_grid parameter, our penalty and C are both arrays.
+%========================================================================================= %
+%www.it-ebooks.info
+%Chapter 5
+%177
+To access the scores, we can use the grid_scores_ attribute of the grid search. We also
+want to find the optimal set of parameters. We can also look at the marginal performance
+of the grid search:
+>>> gs.grid_scores_
+[mean: 0.90300, std: 0.01192, params: {'penalty': 'l1', 'C': 1},
+mean: 0.90100, std: 0.01258, params: {'penalty': 'l2', 'C': 1},
+mean: 0.90200, std: 0.01117, params: {'penalty': 'l1', 'C': 2},
+mean: 0.90100, std: 0.01258, params: {'penalty': 'l2', 'C': 2},
+mean: 0.90200, std: 0.01117, params: {'penalty': 'l1', 'C': 3},
+mean: 0.90100, std: 0.01258, params: {'penalty': 'l2', 'C': 3},
+mean: 0.90100, std: 0.01258, params: {'penalty': 'l1', 'C': 4},
+mean: 0.90100, std: 0.01258, params: {'penalty': 'l2', 'C': 4}]
+We might want to get the max score:
+>>> gs.grid_scores_[1][1]
+0.90100000000000002
+>>> max(gs.grid_scores_, key=lambda x: x[1])
+mean: 0.90300, std: 0.01192, params: {'penalty': 'l1', 'C': 1}
+The parameters obtained are the best choices for our logistic regression.
+Using dummy estimators to compare results
+This recipe is about creating fake estimators; this isn't the pretty or exciting stuff, but it is
+worthwhile to have a reference point for the model you'll eventually build.
+\subsection*{Getting ready}
+In this recipe, we'll perform the following tasks:
+1. Create some data random data.
+2. Fit the various dummy estimators.
+We'll perform these two steps for regression data and classification data.
+%===================================================================== %
+%www.it-ebooks.info
+%Postmodel Workflow
+%178
+How to do it...
+First, we'll create the random data:
+>>> from sklearn.datasets import make_regression, make_classification
+# classification if for later
+>>> X, y = make_regression()
+>>> from sklearn import dummy
+>>> dumdum = dummy.DummyRegressor()
+>>> dumdum.fit(X, y)
+DummyRegressor(constant=None, strategy='mean')
+By default, the estimator will predict by just taking the mean of the values and predicting the
+mean values:
+>>> dumdum.predict(X)[:5]
+array([ 2.23297907, 2.23297907, 2.23297907, 2.23297907,
+2.23297907])
+There are other two other strategies we can try. We can predict a supplied constant (refer to
+constant=None from the preceding command). We can also predict the median value.
+Supplying a constant will only be considered if strategy is "constant".
+Let's have a look:
+>>> predictors = [("mean", None),
+("median", None),
+("constant", 10)]
+>>> for strategy, constant in predictors:
+dumdum = dummy.DummyRegressor(strategy=strategy,
+constant=constant)
+>>> dumdum.fit(X, y)
+>>> print "strategy: {}".format(strategy), ",".join(map(str,
+dumdum.predict(X)[:5]))
+strategy: mean 2.23297906733,2.23297906733,2.23297906733,2.23297906733,2
+.23297906733
+%www.it-ebooks.info
+%Chapter 5
+%179
+strategy: median 20.38535248,20.38535248,20.38535248,20.38535248,20.38535
+248
+strategy: constant 10.0,10.0,10.0,10.0,10.0
+We actually have four options for classifiers. These strategies are similar to the continuous case,
+it's just slanted toward classification problems:
+>>> predictors = [("constant", 0),
+("stratified", None),
+("uniform", None),
+("most_frequent", None)]
+We'll also need to create some classification data:
+>>> X, y = make_classification()
+>>> for strategy, constant in predictors:
+dumdum = dummy.DummyClassifier(strategy=strategy,
+constant=constant)
+dumdum.fit(X, y)
+print "strategy: {}".format(strategy), ",".join(map(str,
+dumdum.predict(X)[:5]))
+strategy: constant 0,0,0,0,0
+strategy: stratified 1,0,0,1,0
+strategy: uniform 0,0,0,1,1
+strategy: most_frequent 1,1,1,1,1
+%============================================================================ %
+How it works...
+It's always good to test your models against the simplest models and that's exactly what
+the dummy estimators give you. For example, imagine a fraud model. In this model, only
+5 percent of the data set is fraud. Therefore, we can probably fit a pretty good model just
+by never guessing any fraud.
+We can create this model by using the stratified strategy, using the following command.
+We can also get a good example of why class imbalance causes problems:
+>>> X, y = make_classification(20000, weights=[.95, .05])
+>>> dumdum = dummy.DummyClassifier(strategy='most_frequent')
+>>> dumdum.fit(X, y)
+%www.it-ebooks.info
+%Postmodel Workflow
+%180
+DummyClassifier(constant=None, random_state=None, strategy='most_
+frequent')
+>>> from sklearn.metrics import accuracy_score
+>>> print accuracy_score(y, dumdum.predict(X))
+0.94575
+We were actually correct very often, but that's not the point. The point is that this is our
+baseline. If we cannot create a model for fraud that is more accurate than this, then it
+isn't worth our time.
+Regression model evaluation
+We learned about quantifying the error in classification, now we'll discuss quantifying the error
+for continuous problems. For example, we're trying to predict an age, not a gender.
+Getting ready
+Like the classification, we'll fake some data, then plot the change. We'll start simple, then
+build up the complexity. The data will be a simulated linear model:
+m = 2
+b = 1
+y = lambda x: m*x+b
+Also, let's get our modules loaded:
+>>> import numpy as np
+>>> import matplotlib.pyplot as plt
+>>> from sklearn import metrics
+How to do it...
+We will be performing the following actions:
+1. Use 'y' to generate 'y_actual'.
+2. Use 'y_actual' plus some err to generate 'y_prediction'.
+3. Plot the differences.
+4. Walk through various metrics and plot some of them.
+%www.it-ebooks.info
+%Chapter 5
+%181
+Let's take care of steps 1 and 2 at the same time and just have a function do the work for us.
+This will be almost the same thing we just saw, but we'll add the ability to specify an error
+(or bias if a constant):
+>>> def data(x, m=2, b=1, e=None, s=10):
+"""
+Args:
+x: The x value
+m: Slope
+b: Intercept
+e: Error, optional, True will give random error
+"""
+if e is None:
+e_i = 0
+elif e is True:
+e_i = np.random.normal(0, s, len(xs))
+else:
+e_i = e
+return x * m + b + e_i
+Now that we have the function, let's define y_hat and y_actual. We'll do it in a
+convenient way:
+>>> from functools import partial
+>>> N = 100
+>>> xs = np.sort(np.random.rand(N)*100)
+>>> y_pred_gen = partial(data, x=xs, e=True)
+>>> y_true_gen = partial(data, x=xs)
+>>> y_pred = y_pred_gen()
+>>> y_true = y_true_gen()
+>>> f, ax = plt.subplots(figsize=(7, 5))
+>>> ax.set_title("Plotting the fit vs the underlying process.")
+>>> ax.scatter(xs, y_pred, label=r'$\hat{y}$')
+%www.it-ebooks.info
+%Postmodel Workflow
+%182
+>>> ax.plot(xs, y_true, label=r'$y$')
+>>> ax.legend(loc='best')
+The output for this code is as follows:
+Just to confirm the output, we'd be working with the classical residuals:
+>>> e_hat = y_pred - y_true
+>>> f, ax = plt.subplots(figsize=(7, 5))
+>>> ax.set_title("Residuals")
+>>> ax.hist(e_hat, color='r', alpha=.5, histtype='stepfilled')
+%www.it-ebooks.info
+%Chapter 5
+%183
+The output for the residuals is as follows:
+So that looks good now.
+%============================================== %
+How it works...
+Now let's move to the metrics.
+First, a metric is the mean squared error:
+( ) (( )2 ) , trus pred trus pred MSE y y = E y − y
+You can use the following code to find the value of the mean squared error:
+>>> metrics.mean_squared_error(y_true, y_pred)
+93.342352628475368
+You'll notice that this code will penalize large errors more than small errors. It's important to
+remember that all we're doing here is applying what probably was the cost function for the
+model on the test data.
+www.it-ebooks.info
+Postmodel Workflow
+184
+Another option is the mean absolute deviation. We need to take the absolute value of the
+difference, if we don't, our value will probably be fairly close to zero, the mean of the distribution:
+( , ) (| |) trus pred trus pred MAD y y = E y − y
+The final option is R2, this is 1 minus the ratio of squared errors for the overall mean and the
+fit model. As the ratio tends to 0, the R2 tends to 1:
+>>> metrics.r2_score(y_true, y_pred)
+0.9729312117010761
+R2 is deceptive; it cannot give the clearest sense of the accuracy of the model.
+%=========================================================================== %
+\section*{Feature selection}
+This recipe along with the two following it will be centered around automatic feature selection.
+I like to think of this as the feature analogue of parameter tuning. In the same way that we
+cross-validate to find an appropriately general parameter, we can find an appropriately general
+subset of features. This will involve several different methods.
+The simplest idea is univariate selection. The other methods involve working with a combination
+of features.
+An added benefit to feature selection is that it can ease the burden on the data collection.
+Imagine that you have built a model on a very small subset of the data. If all goes well, you
+might want to scale up to predict the model on the entire subset of data. If this is the case,
+you can ease the engineering effort of data collection at that scale.
+Getting ready
+With univariate feature selection, scoring functions will come to the forefront again. This time,
+they will define the comparable measure by which we can eliminate features.
+In this recipe, we'll fit a regression model with a few 10,000 features, but only 1,000 points.
+We'll walk through the various univariate feature selection methods:
+>>> from sklearn import datasets
+>>> X, y = datasets.make_regression(1000, 10000)
+%www.it-ebooks.info
+%Chapter 5
+%185
+Now that we have the data, we will compare the features that are included with the various
+methods. This is actually a very common situation when you're dealing in text analysis or
+some areas of bioinformatics.
+How to do it...
+First, we need to import the feature_selection module:
+>>> from sklearn import feature_selection
+>>> f, p = feature_selection.f_regression(X, y)
+Here, f is the f score associated with each linear model fit with just one of the features.
+We can then compare these features and based on this comparison, we can cull features.
+p is also the p value associated with that f value.
+In statistics, the p value is the probability of a value more extreme than the current value of
+the test statistic. Here, the f value is the test statistic:
+>>> f[:5]
+array([ 1.06271357e-03, 2.91136869e+00, 1.01886922e+00,
+2.22483130e+00, 4.67624756e-01])
+>>> p[:5]
+array([ 0.97400066, 0.08826831, 0.31303204, 0.1361235, 0.49424067])
+As we can see, many of the p values are quite large. We would rather want that the p values
+be quite small. So, we can grab NumPy out of our tool box and choose all the p values less
+than .05. These will be the features we'll use for the analysis:
+>>> import numpy as np
+>>> idx = np.arange(0, X.shape[1])
+>>> features_to_keep = idx[p < .05]
+>>> len(features_to_keep)
+501
+As you can see, we're actually keeping a relatively large amount of features. Depending on the
+context of the model, we can tighten this p value. This will lessen the number of features kept.
+Another option is using the VarianceThreshold object. We've learned a bit about it,
+but it's important to understand that our ability to fit models is largely based on the variance
+created by features. If there is no variance, then our features cannot describe the variation
+in the dependent variable. A nice feature of this, as per the documentation, is that because
+it does not use the outcome variable, it can be used for unsupervised cases.
+%www.it-ebooks.info
+%Postmodel Workflow
+%186
+We will need to set the threshold for which we eliminate features. In order to do that, we just
+take the median of the feature variances and supply that:
+>>> var_threshold = feature_selection.VarianceThreshold(np.median(np.
+var(X, axis=1)))
+>>> var_threshold.fit_transform(X).shape
+(1000, 4835)
+As we can see, we eliminated roughly half the features, more or less what we would expect.
+How it works...
+In general, all these methods work by fitting a basic model with a single feature. Depending on
+whether we have a classification problem or a regression problem, we can use the appropriate
+scoring function.
+Let's look at a smaller problem and visualize how feature selection will eliminate certain
+features. We'll use the same scoring function from the first example, but just 20 features:
+>>> X, y = datasets.make_regression(10000, 20)
+>>> f, p = feature_selection.f_regression(X, y)
+Now let's plot the p values of the features, we can see which feature will be eliminated and
+which will be kept:
+>>> from matplotlib import pyplot as plt
+>>> f, ax = plt.subplots(figsize=(7, 5))
+>>> ax.bar(np.arange(20), p, color='k')
+>>> ax.set_title("Feature p values")
+www.it-ebooks.info
+Chapter 5
+187
+The output will be as follows:
+As we can see, many of the features won't be kept, but several will be.
+Feature selection on L1 norms
+We're going to work with some ideas similar to those we saw in the recipe on Lasso Regression.
+In that recipe, we looked at the number of features that had zero coefficients.
+Now we're going to take this a step further and use the spareness associated with L1 norms
+to preprocess the features.
+Getting ready
+We'll use the diabetes dataset to fit a regression. First, we'll fit a basic LinearRegression
+model with a ShuffleSplit cross validation. After we do that, we'll use LassoRegression
+to find the coefficients that are 0 when using an L1 penalty. This hopefully will help us to avoid
+overfitting, which means that the model is too specific to the data it was trained on. To put this
+another way, the model, if overfit, does not generalize well to outside data.
+We're going to perform the following steps:
+1. Load the dataset.
+2. Fit a basic linear regression model.
+www.it-ebooks.info
+Postmodel Workflow
+188
+3. Use feature selection to remove uninformative features.
+4. Refit the linear regression and check to see how well it fits compared with the fully
+featured model.
+How to do it...
+First, let's get the dataset:
+>>> import sklearn.datasets as ds
+>>> diabetes = ds.load_diabetes()
+Let's create the LinearRegression object:
+>>> from sklearn import linear_model
+>>> lr = linear_model.LinearRegression()
+Let's also import the metrics module for the mean_squared_error function and the
+cross_validation module for the ShuffleSplit cross validation scheme:
+>>> from sklearn import metrics
+>>> from sklearn import cross_validation
+>>> shuff = cross_validation.ShuffleSplit(diabetes.target.size)
+Now, let's fit the model, and we'll keep track of the mean squared error for each iteration
+of ShuffleSplit:
+>>> mses = []
+>>> for train, test in shuff:
+train_X = diabetes.data[train]
+train_y = diabetes.target[train]
+test_X = diabetes.data[~train]
+test_y = diabetes.target[~train]
+lr.fit(train_X, train_y)
+mses.append(metrics.mean_squared_error(test_y,
+lr.predict(test_X)))
+>>> np.mean(mses)
+2856.366626198198
+www.it-ebooks.info
+Chapter 5
+189
+So now that we have the regular fit, let's check it after we eliminate any features with a zero
+for the coefficient. Let's fit the Lasso Regression:
+>>> from sklearn import feature_selection
+>>> from sklearn import cross_validation
+>>> cv = linear_model.LassoCV()
+>>> cv.fit(diabetes.data, diabetes.target)
+>>> cv.coef_
+array([ -0. , -226.2375274 , 526.85738059, 314.44026013,
+-196.92164002, 1.48742026, -151.78054083, 106.52846989,
+530.58541123, 64.50588257])
+We'll remove the first feature, I'll use a NumPy array to represent the columns that are to be
+included in the model:
+>>> import numpy as np
+>>> columns = np.arange(diabetes.data.shape[1])[cv.coef_ != 0]
+>>> columns
+array([1, 2, 3 4, 5, 6, 7, 8, 9])
+Okay, so now we'll fit the model with the specific features (see the columns in the following
+code block):
+>>> l1mses = []
+>>> for train, test in shuff:
+train_X = diabetes.data[train][:, columns]
+train_y = diabetes.target[train]
+test_X = diabetes.data[~train][:, columns]
+test_y = diabetes.target[~train]
+lr.fit(train_X, train_y)
+l1mses.append(metrics.mean_squared_error(test_y,
+lr.predict(test_X)))
+>>> np.mean(l1mses)
+2861.0763924492171
+>>> np.mean(l1mses) - np.mean(mses)
+4.7097662510191185
+As we can see, even though we get an uninformative feature, the model still fits worse. This
+isn't always the case. In the next section, we'll compare a fit between models where there are
+many uninformative features.
+www.it-ebooks.info
+Postmodel Workflow
+190
+How it works...
+First, we're going to create a regression dataset with many uninformative features:
+>>> X, y = ds.make_regression(noise=5)
+Let's fit a normal regression:
+>>> mses = []
+>>> shuff = cross_validation.ShuffleSplit(y.size)
+>>> for train, test in shuff:
+train_X = X[train]
+train_y = y[train]
+test_X = X[~train]
+test_y = y[~train]
+lr.fit(train_X, train_y)
+mses.append(metrics.mean_squared_error(test_y,
+lr.predict(test_X)))
+>>> np.mean(mses)
+879.75447864034209
+Now, we can walk through the same process for Lasso regression:
+>>> cv.fit(X, y)
+LassoCV(alphas=None, copy_X=True, cv=None, eps=0.001,
+fit_intercept=True, max_iter=1000, n_alphas=100,
+n_jobs=1, normalize=False, positive=False, precompute='auto',
+tol=0.0001, verbose=False)
+We'll create the columns again. This is a nice pattern that will allow us to specify the features
+we want to include:
+>>> import numpy as np
+>>> columns = np.arange(X.shape[1])[cv.coef_ != 0]
+>>> columns[:5]
+array([11, 15, 17, 20, 21,])
+>>> mses = []
+www.it-ebooks.info
+Chapter 5
+191
+>>> shuff = cross_validation.ShuffleSplit(y.size)
+>>> for train, test in shuff:
+train_X = X[train][:, columns]
+train_y = y[train]
+test_X = X[~train][:, columns]
+test_y = y[~train]
+lr.fit(train_X, train_y)
+mses.append(metrics.mean_squared_error(test_y,
+lr.predict(test_X)))
+>>> np.mean(mses)
+15.755403220117708
+As we can see, we get an extreme improvement in the fit of the model. This just exemplifies
+that we need to be cognizant that not all the models need to be or should be thrown into
+the model.
+Persisting models with joblib
+In this recipe, we're going to show how you can keep your model around for a later usage.
+For example, you might want to actually use a model to predict the outcome and automatically
+make a decision.
+Getting ready
+In this recipe, we will perform the following tasks:
+1. Fit the model that we will persist.
+2. Import joblib and save the model.
+How to do it...
+To persist models with joblib, the following code can be used:
+>>> from sklearn import datasets, tree
+>>> X, y = datasets.make_classification()
+www.it-ebooks.info
+Postmodel Workflow
+192
+>>> dt = tree.DecisionTreeClassifier()
+>>> dt.fit(X, y)
+DecisionTreeClassifier(compute_importances=None, criterion='gini',
+max_depth=None, max_features=None,
+max_leaf_nodes=None, min_density=None,
+min_samples_leaf=1, min_samples_split=2,
+random_state=None, splitter='best')
+>>> from sklearn.externals import joblib
+>>> joblib.dump(dt, "dtree.clf")
+['dtree.clf',
+'dtree.clf_01.npy',
+'dtree.clf_02.npy',
+'dtree.clf_03.npy',
+'dtree.clf_04.npy']
+How it works...
+The preceding code works by saving the state of the object that can be reloaded into a
+scikit-learn object. It's important to note that the state of model will have varying levels
+of complexity, given the model type.
+For simplicity sake, consider that all we'd need to save is the way to predict the outcome
+for the given inputs. Well, for regression that would be easy, a little matrix algebra and
+we're done. However, for models like random forest, where we could have many trees,
+and those trees could be of various complexity levels, regression is difficult.
+There's more...
+We can check the size of decision tree versus random forest:
+>>> from sklearn import ensemble
+>>> rf = ensemble.RandomForestClassifier()
+>>> rf.fit(X, y)
+RandomForestClassifier(bootstrap=True, compute_importances=None,
+criterion='gini', max_depth=None,
+max_features='auto', max_leaf_nodes=None,
+min_density=None, min_samples_leaf=1,
+min_samples_split=2, n_estimators=10,
+n_jobs=1, oob_score=False, random_state=None,
+verbose=0)
+www.it-ebooks.info
+Chapter 5
+193
+I'm going to omit the output, but in total, there we were 52 files outputted on my machine:
+>>> joblib.dump(rf, "rf.clf")
+['rf.clf',
+'rf.clf_01.npy',
+'rf.clf_02.npy',
+'rf.clf_03.npy',
+'rf.clf_04.npy',
+'rf.clf_05.npy',
+'rf.clf_06.npy',…]
+\end{document}

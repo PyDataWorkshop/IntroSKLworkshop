@@ -1,0 +1,152 @@
+\documentclass[SKL-MASTER.tex]{subfiles}
+\begin{document}
+	\LARGE
+	
+	\noindent \textbf{Layout of Datasets}\\
+	The scikit-learn deals with learning information from one or more datasets that are represented as 2D arrays. They can be understood as a list of multi-dimensional observations. We say that the first axis of these arrays is the samples axis, while the second is the features axis.\\ 	When the data is not intially in the (\texttt{n\_samples, n\_features}) shape, it needs to be preprocessed to be used by the scikit.
+	\bigskip
+	
+	\noindent \textbf{Packaged Datasets}\\
+	The scikit-learn library is packaged with datasets. These datasets are useful for getting a handle on a given machine learning algorithm or library feature before using it in your own work. \\
+
+	
+	% This recipe demonstrates how to load the famous Iris flowers dataset.
+\newpage	
+\noindent	A simple example shipped with the scikit: iris dataset
+	
+	\begin{framed}
+		\begin{verbatim}
+		>>> from scikits.learn import datasets
+		>>> iris = datasets.load_iris()
+		>>> data = iris.data
+		>>> data.shape
+		(150, 4)
+		\end{verbatim}
+	\end{framed}
+	
+\noindent	Iris is made of 150 observations of irises, each described by 4 features: their sepal and petal length and width, as detailed in \texttt{iris.DESCR}.
+	
+	
+	%==========================================================================%
+	\newpage
+	
+	
+	\noindent 
+	scikit-learn embeds a copy of the iris CSV file along with a helper function to load it into numpy arrays:
+	
+	
+	\begin{framed}
+		\begin{verbatim}
+		from sklearn.datasets import load_iris
+		
+		## -  Load the packaged iris flowers dataset
+		## - Iris flower dataset 
+		## - (4x150, reals, multi-label classification)
+		
+		iris = load_iris()
+		print(iris)
+		iris.keys()
+		
+	\end{verbatim}
+	\end{framed}
+	\newpage
+\textbf{Classifying irises}
+
+The iris dataset is a classification task consisting in identifying 3 different types of irises (Setosa, Versicolour, and Virginica) from their petal and sepal length and width:
+
+\begin{framed}
+	\begin{verbatim}
+	>>> import numpy as np
+	>>> from sklearn import datasets
+	>>> iris = load_iris()
+	>>>
+	>>> iris_X = iris.data
+	>>> iris_y = iris.target
+	>>>
+	>>> np.unique(iris_y)
+	
+		array([0, 1, 2])
+	>>>
+	>>> # Three Classes (Species)
+	\end{verbatim}
+\end{framed}
+
+
+Split iris data in train and test data
+A random permutation, to split the data randomly
+\begin{framed}
+	\begin{verbatim}
+>>> np.random.seed(0)
+>>> indices = np.random.permutation(len(iris_X))
+>>> iris_X_train = iris_X[indices[:-10]]
+>>> iris_y_train = iris_y[indices[:-10]]
+>>> iris_X_test  = iris_X[indices[-10:]]
+>>> iris_y_test  = iris_y[indices[-10:]]
+>>> # Create and fit a nearest-neighbor classifier
+>>> from scikits.learn.neighbors import NeighborsClassifier
+>>> knn = NeighborsClassifier()
+>>> knn.fit(iris_X_train, iris_y_train)
+NeighborsClassifier(n_neighbors=5, leaf_size=20, algorithm='auto')
+>>> knn.predict(iris_X_test)
+array([1, 2, 1, 0, 0, 0, 2, 1, 2, 0])
+>>> iris_y_test
+array([1, 1, 1, 0, 0, 0, 2, 1, 2, 0])
+
+	\end{verbatim}
+\end{framed}
+
+%============================================================================= %
+\subsubsection{k-Nearest neigbhors classifier}
+
+The simplest possible classifier is the nearest neighbor: given a new observation \texttt{x\_test}, find in the training set (i.e. the data used to train the estimator) the observation with the closest feature vector.
+\newpage
+	\noindent \textbf{Load from CSV}\\ \begin{itemize}
+\item In most of the Scikit-learn algorithms, the data must be loaded as a \texttt{Bunch} Object. 
+\item However there are many example in the tutorial where \texttt{load\_files()} or other functions are used to populate the bunch object. 
+\item Function like \texttt{load\_files()} expect data to be present in certain format. Suppose we have a different format in which data is stored.
+\item It is very common to have a dataset as a CSV file on the local workstation or on a remote server.
+
+\item You load a CSV file from a URL, in this case the Pima Indians diabetes classification dataset from the UCI Machine Learning Repository.
+
+\item From the prepared \texttt{X} and \texttt{y} variables, you can train a machine learning model.
+%\item  A CSV file with a bunch of strings for each field. 
+	\end{itemize}
+
+	
+	\newpage
+	
+	\begin{framed}
+		\begin{verbatim}
+		# Pima Indians diabetes
+		# Load the  dataset from CSV URL
+
+		import numpy as np
+		import urllib
+		
+		# URL for the Pima Indians Diabetes dataset 
+		# (UCI Machine Learning Repository)
+
+		url = "http://goo.gl/j0Rvxq"
+		
+		# download the file
+		raw_data = urllib.urlopen(url)
+		
+		# load the CSV file as a numpy matrix
+
+		dataset = np.loadtxt(raw_data, delimiter=",")
+		print(dataset.shape)
+		
+		# separate the data from the target attributes
+		X = dataset[:,0:7]
+		y = dataset[:,8]
+		
+		\end{verbatim}
+	\end{framed}
+	%
+	%\noindent \textbf{Summary}
+	%
+	%In this post you discovered that the scikit-learn method comes with packaged data sets including the iris flowers dataset. These datasets can be loaded easily and used for explore and experiment with different machine learning models.
+	%
+	%You also saw how you can load CSV data with scikit-learn. You learned a way of opening CSV files from the web using the \textbf{urllib} library and how you can read that data as a NumPy matrix for use in scikit-learn.
+	
+\end{document}

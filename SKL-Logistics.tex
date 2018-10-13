@@ -1,0 +1,52 @@
+\documentclass[SKL-MASTER.tex]{subfiles}
+\begin{document}
+% %- http://gaelvaroquaux.github.io/scikit-learn-tutorial/model_selection.html
+
+\subsubsection{2.2.4. Classification}
+
+
+% _images/logistic_regression1.png
+
+For classification, as in the labeling iris task, linear regression is not the right approach, as it will give too much weight to data far from the decision frontier. A linear approach is to fit a sigmoid function, or logistic function:
+
+\[y = \textrm{sigmoid}(X\beta - \textrm{offset}) + \epsilon =
+\frac{1}{1 + \textrm{exp}(- X\beta + \textrm{offset})} + \epsilon\]
+
+\begin{figure}[h!]
+	\centering
+	\includegraphics[width=0.7\linewidth]{sklcass/logistic_regression1}
+	\caption{}
+	\label{fig:logistic_regression1}
+\end{figure}
+
+\begin{framed}
+\begin{verbatim}
+>>> logistic = linear_model.LogisticRegression(C=1e5)
+>>> logistic.fit(iris_X_train, iris_y_train)
+LogisticRegression(C=100000.0, intercept_scaling=1, dual=False,
+          fit_intercept=True, penalty='l2', tol=0.0001)
+ 
+\end{verbatim}
+\end{framed}
+
+\begin{figure}
+\centering
+\includegraphics[width=0.7\linewidth]{sklcass/iris_logistic1}
+% % \caption{}
+% % \label{fig:iris_logistic1}
+\end{figure}
+
+%==================================================================== %
+\newpage
+\subsection{Multiclass classification}
+
+If you have several classes to predict, an option often used is to fit one-versus-all classifiers, and use a voting heuristic for the final decision.
+
+\subsection{Shrinkage and sparsity with logistic regression}
+
+The C parameter controls the amount of regularization in the LogisticRegression object, the bigger C, the less regularization. penalty=”l2” gives shrinkage (i.e. non-sparse coefficients), while penalty=”l1” gives sparsity.
+
+Excercise
+
+Try classifying the digits dataset with nearest neihbors and a linear model. Leave out the last 10\% and test prediction performance on these observations.
+\end{document}
