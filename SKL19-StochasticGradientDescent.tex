@@ -85,15 +85,15 @@ w = w – learning_rate*gradient(cost(w))
 %% Premodel Workflow
 %% 54
 The relevant variables are as follows:
-\begin{itemize}
-\item w: This is the coefficient matrix.
-\item learning_rate: This shows how big a step to take at each iteration. This might
+
+*   w: This is the coefficient matrix.
+*   learning_rate: This shows how big a step to take at each iteration. This might
 be important to tune if you aren't getting a good convergence.
-\item gradient: This is the matrix of second derivatives.
-\item cost: This is the squared error for regression. We'll see later that this cost function
+*   gradient: This is the matrix of second derivatives.
+*   cost: This is the squared error for regression. We'll see later that this cost function
 can be adapted to work with classification tasks. This flexibility is one thing that
 makes SGD so useful.
-\end{itemize}
+
 This will not be so bad, except for the fact that the gradient function is expensive. As the
 vector of coefficients gets larger, calculating the gradient becomes very expensive. For each
 update step, we need to calculate a new weight for every point in the data, and then update.

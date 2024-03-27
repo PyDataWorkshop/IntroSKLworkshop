@@ -1,5 +1,5 @@
 \documentclass[SKL-MASTER.tex]{subfiles}
-\begin{document}
+
 % %- http://gaelvaroquaux.github.io/scikit-learn-tutorial/model_selection.html
 
 \subsubsection{2.2.4. Classification}
@@ -19,7 +19,7 @@ For classification, as in the labeling iris task, linear regression is not the r
 	\label{fig:logistic_regression1}
 \end{figure}
 
-\begin{framed}
+<pre>
 \begin{verbatim}
 >>> logistic = linear_model.LogisticRegression(C=1e5)
 >>> logistic.fit(iris_X_train, iris_y_train)

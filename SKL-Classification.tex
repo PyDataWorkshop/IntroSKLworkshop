@@ -13,14 +13,14 @@ X, y = iris.data, iris.target
 knn = neighbors.KNeighborsClassifier(n_neighbors=1)
 
 
-\begin{framed}
+<pre>
 \begin{verbatim}
 # fit the model
 knn.fit(X, y)
 
 \end{verbatim}
 \end{framed}
-\begin{framed}
+<pre>
 \begin{verbatim}
 # What kind of iris has 3cm x 5cm sepal and 4cm x 2cm petal?
 # call the "predict" method:
@@ -30,7 +30,7 @@ print iris.target_names[result]
 ['virginica']
 \end{verbatim}
 \end{framed}
-\begin{framed}
+<pre>
 \begin{verbatim}
 from fig_code import plot_iris_knn
 plot_iris_knn()
@@ -40,7 +40,7 @@ Exercise: Now use as an estimator on the same problem: sklearn.svm.SVC.
 Note that you don't have to know what it is do use it.
 If you finish early, do the same plot as above.
 
-\begin{framed}
+<pre>
 \begin{verbatim}
 from sklearn.svm import SVC
 In [37]:

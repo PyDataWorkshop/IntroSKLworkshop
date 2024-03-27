@@ -1,17 +1,17 @@
 \documentclass[SKL-MASTER.tex]{subfiles}
-\begin{document}
-\LARGE
 
-\noindent \textbf{Estimators objects: Fitting data:}\\The core object of scikit-learn is the estimator object. All estimator objects expose a \texttt{fit} method, that takes as input a dataset (2D array):
 
-\begin{framed}
+
+ \textbf{Estimators objects: Fitting data:}\\The core object of scikit-learn is the estimator object. All estimator objects expose a \texttt{fit} method, that takes as input a dataset (2D array):
+
+<pre>
 \begin{verbatim}
 >>> estimator.fit(data)
 \end{verbatim}
 \end{framed}
 
-\noindent Suppose \texttt{LogReg} and \texttt{KNN} are (shorthand names for) scikit-learn estimators.
-\begin{framed}
+ Suppose \texttt{LogReg} and \texttt{KNN} are (shorthand names for) scikit-learn estimators.
+<pre>
 \begin{verbatim}
 >>> # Supervised Learning Problem
 >>> LogReg.fit(SAheartFeat, SAheartTarget)
@@ -22,26 +22,26 @@
 \end{framed}
 
 \newpage
-%------------------------------------------------%
-\noindent \textbf{Estimator parameters:}\\
+----------------------%
+ \textbf{Estimator parameters:}\\
 All the parameters of an estimator can be set when it is instanciated, or by modifying the corresponding attribute:
 
-\begin{framed}
+<pre>
 \begin{verbatim}
 >>> estimator = Estimator(param1=1, param2=2)
 >>> estimator.param1
 \end{verbatim}
 \end{framed}
 
-%------------------------------------------------%
+----------------------%
 % % \subsubsection{Retrieving Estimator parameters:}
 
-\noindent \textbf{Retrieving Estimator parameters:}\\ 
-\begin{itemize}
-\item When data is fitted with an estimator, parameters are estimated from the data at hand.
-\item All the estimated parameters are attributes of the estimator object ending by an underscore:
-\end{itemize}
-\begin{framed}
+ \textbf{Retrieving Estimator parameters:}\\ 
+
+*   When data is fitted with an estimator, parameters are estimated from the data at hand.
+*   All the estimated parameters are attributes of the estimator object ending by an underscore:
+
+<pre>
 \begin{verbatim}
 >>> estimator.estimated_param_ 
 \end{verbatim}
